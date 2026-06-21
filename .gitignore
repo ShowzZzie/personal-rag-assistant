@@ -1,0 +1,33 @@
+# Environment and secrets
+.env
+
+# Local data (spec: gitignored)
+data/documents/
+data/chroma/
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+notes.md
