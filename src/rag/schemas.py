@@ -1,5 +1,6 @@
 from sqlmodel import SQLModel, Field
 from datetime import datetime
+import uuid
 
 class ChunkMetadata(SQLModel):
     source_file: str
@@ -8,12 +9,12 @@ class ChunkMetadata(SQLModel):
     char_end: int
 
 class DocumentChunk(SQLModel):
-    chunk_id: str
+    chunk_id: uuid.UUID
     document_id: str
     collection: str
     text: str
     chunk_index: int
-    metadata: ChunkMetadata
+    chunk_metadata: ChunkMetadata
 
 class RetrievedChunk(SQLModel):
     chunk: DocumentChunk
