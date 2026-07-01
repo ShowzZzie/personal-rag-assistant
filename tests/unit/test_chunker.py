@@ -42,3 +42,32 @@ def test_chunk_sentence_aware_small_text():
     assert len(chunks) == 1
     assert chunks[0].text == "A single, test sentence"
     assert all(chunk.collection == "tc" for chunk in chunks)
+
+
+
+def test_chunker_recursive_good():
+    text = """Lorem ipsum dolor sit amet,\nconsectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n\nUt enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\nDuis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."""
+    chunks = chunker_recursive(text, "test", "123", "tc", 400, 1, ["\n\n", "\n", "."])
+    assert len(chunks) == 2
+    assert "Lorem ipsum" in chunks[0].text
+    assert "Ut enim ad minim" in chunks[1].text
+    assert all(chunk.collection == "tc" for chunk in chunks)
+
+def test_chunker_recursive_empty_string():
+    assert chunker_recursive("", "test", "123", "tc", 400, 1, ["\n\n", "\n", "."]) == []
+
+def test_chunker_recursive_small_text():
+    text = "Short test text."
+    chunks = chunker_recursive(text, "test", "123", "tc", 500, 100, ["\n\n", "\n", "."])
+    assert len(chunks) == 1
+    assert chunks[0].text == "Short test text."
+    assert all(chunk.collection == "tc" for chunk in chunks)
+
+def test_chunker_recursive_fallback_fixed_size():
+    text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+    chunks = chunker_recursive(text, "test", "123", "tc", 200, 15)
+    assert len(chunks) == 3
+    assert len(chunks[0].text) == 200
+    assert len(chunks[1].text) == 200
+    assert len(chunks[2].text) == 75
+    assert all(chunk.collection == "tc" for chunk in chunks)
