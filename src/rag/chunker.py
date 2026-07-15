@@ -1,50 +1,46 @@
-from rag.schemas import DocumentChunk, ChunkMetadata
 import uuid
+
 import spacy
+
+from rag.schemas import ChunkMetadata, DocumentChunk
 
 nlp = spacy.load("en_core_web_sm")
 
+
 def chunker_fixed_size(
-    document: str,
-    filename: str,
-    document_id: str,
-    collection: str,
-    size: int,
-    overlap: int) -> list[DocumentChunk]:
-    
+    document: str, filename: str, document_id: str, collection: str, size: int, overlap: int
+) -> list[DocumentChunk]:
+
     result = []
     n_id = 0
     char_start = 0
 
     while len(document) > 0:
-        result.append(DocumentChunk(
-            chunk_id=uuid.uuid4(),
-            document_id=document_id,
-            collection=collection,
-            text=document[:size],
-            chunk_index=n_id,
-            chunk_metadata=ChunkMetadata(
-                source_file=filename,
-                page_number=None,
-                char_start=char_start,
-                char_end=char_start+size-1
+        result.append(
+            DocumentChunk(
+                chunk_id=uuid.uuid4(),
+                document_id=document_id,
+                collection=collection,
+                text=document[:size],
+                chunk_index=n_id,
+                chunk_metadata=ChunkMetadata(
+                    source_file=filename,
+                    page_number=None,
+                    char_start=char_start,
+                    char_end=char_start + size - 1,
+                ),
             )
-            ))
-        document = document[size-overlap:]
+        )
+        document = document[size - overlap :]
         n_id += 1
         char_start = char_start + size - overlap
 
     return result
 
 
-
 def chunker_sentence_aware(
-    document: str,
-    filename: str,
-    document_id: str,
-    collection: str,
-    size: int,
-    overlap: int) -> list[DocumentChunk]:
+    document: str, filename: str, document_id: str, collection: str, size: int, overlap: int
+) -> list[DocumentChunk]:
 
     individual_sentences = [sent for sent in nlp(document).sents]
     result = []
@@ -55,25 +51,26 @@ def chunker_sentence_aware(
         chunk = individual_sentences[:size]
         chunk_length = sum(len(x.text) for x in chunk)
 
-        result.append(DocumentChunk(
-            chunk_id=uuid.uuid4(),
-            document_id=document_id,
-            collection=collection,
-            text=" ".join(x.text for x in chunk),
-            chunk_index=n_id,
-            chunk_metadata=ChunkMetadata(
-                source_file=filename,
-                page_number=None,
-                char_start=char_start,
-                char_end=char_start+chunk_length-1
+        result.append(
+            DocumentChunk(
+                chunk_id=uuid.uuid4(),
+                document_id=document_id,
+                collection=collection,
+                text=" ".join(x.text for x in chunk),
+                chunk_index=n_id,
+                chunk_metadata=ChunkMetadata(
+                    source_file=filename,
+                    page_number=None,
+                    char_start=char_start,
+                    char_end=char_start + chunk_length - 1,
+                ),
             )
-            ))
+        )
         n_id += 1
         char_start += chunk_length
-        individual_sentences = individual_sentences[size-overlap:]
+        individual_sentences = individual_sentences[size - overlap :]
 
     return result
-
 
 
 def chunker_recursive(
@@ -83,9 +80,10 @@ def chunker_recursive(
     collection: str,
     size: int,
     overlap: int,
-    recursive_order: list[str] = None,
+    recursive_order: list[str] | None = None,
     n_id: int = 0,
-    char_start: int = 0,) -> list[DocumentChunk]:
+    char_start: int = 0,
+) -> list[DocumentChunk]:
 
     if not recursive_order:
         return chunker_fixed_size(document, filename, document_id, collection, size, overlap)
@@ -96,55 +94,43 @@ def chunker_recursive(
 
     for block in blocks:
         if len(block) > size:
-            rec_result = chunker_recursive(block, filename, document_id, collection, size, overlap, recursive_order[1:], n_id, char_start)
+            rec_result = chunker_recursive(
+                block,
+                filename,
+                document_id,
+                collection,
+                size,
+                overlap,
+                recursive_order[1:],
+                n_id,
+                char_start,
+            )
             result.extend(rec_result)
-            n_id+=len(rec_result)
+            n_id += len(rec_result)
         elif block != "":
-            result.append(DocumentChunk(
-                chunk_id=uuid.uuid4(),
-                document_id=document_id,
-                collection=collection,
-                text=block,
-                chunk_index=n_id,
-                chunk_metadata=ChunkMetadata(
-                    source_file=filename,
-                    page_number=None,
-                    char_start=char_start,
-                    char_end=char_start+len(block)-1
+            result.append(
+                DocumentChunk(
+                    chunk_id=uuid.uuid4(),
+                    document_id=document_id,
+                    collection=collection,
+                    text=block,
+                    chunk_index=n_id,
+                    chunk_metadata=ChunkMetadata(
+                        source_file=filename,
+                        page_number=None,
+                        char_start=char_start,
+                        char_end=char_start + len(block) - 1,
+                    ),
                 )
-            ))
-            n_id+=1
-        char_start = char_start+len(block)+len(splitter) # char_start needs fixing
+            )
+            n_id += 1
+        char_start = char_start + len(block) + len(splitter)  # char_start needs fixing
 
     return result
 
 
-
-
 if __name__ == "__main__":
-    """print(chunker_fixed_size(
-        document="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-        filename="Default Lorem Ipsum",
-        document_id="random_id_123",
-        collection="test",
-        size=10,
-        overlap=3
-    ))
-    
-    
-    for chunk in chunker_sentence_aware(
-        document="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-        filename="Default Lorem Ipsum",
-        document_id="random_id_123",
-        collection="test",
-        size=3,
-        overlap=1
-    ):
-        print(chunk)
-        print("="*20)
-    """
-
-    print("/-="*20)
+    print("/-=" * 20)
 
     for chunk in chunker_recursive(
         document="""Hypertrophy Training Frequency
@@ -159,7 +145,7 @@ Recovery is the constraint most programs ignore. Sleep, stress, and total weekly
         collection="test",
         size=200,
         overlap=20,
-        recursive_order=["\n\n", "\n", "."]
+        recursive_order=["\n\n", "\n", "."],
     ):
         print(chunk)
-        print("&"*20)
+        print("&" * 20)

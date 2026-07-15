@@ -1,12 +1,15 @@
-from sqlmodel import SQLModel, Field
+import uuid  # noqa: TC003
 from datetime import datetime
-import uuid
+
+from sqlmodel import Field, SQLModel
+
 
 class ChunkMetadata(SQLModel):
     source_file: str
     page_number: int | None
     char_start: int
     char_end: int
+
 
 class DocumentChunk(SQLModel):
     chunk_id: uuid.UUID
@@ -16,10 +19,12 @@ class DocumentChunk(SQLModel):
     chunk_index: int
     chunk_metadata: ChunkMetadata
 
+
 class RetrievedChunk(SQLModel):
     chunk: DocumentChunk
     score: float
     rank: int
+
 
 class Document(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -29,6 +34,7 @@ class Document(SQLModel, table=True):
     ingested_at: datetime = Field(default_factory=datetime.now)
     chunk_count: int
     embedding_model: str
+
 
 class Answer(SQLModel):
     question: str

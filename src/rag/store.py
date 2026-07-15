@@ -1,15 +1,25 @@
-from rag.schemas import DocumentChunk
-from rag.embedder import get_embedding
+from typing import TYPE_CHECKING
+
 import chromadb
+
+from rag.embedder import get_embedding
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from chromadb.api.types import Metadata
+
+    from rag.schemas import DocumentChunk
 
 chroma_client = chromadb.Client()
 
+
 def add_chunks(chunks: list[DocumentChunk]) -> None:
     ids: list[str] = []
-    embeddings: list[list[float]] = []
+    embeddings: list[Sequence[float]] = []
     documents: list[str] = []
-    metadatas: list[dict] = []
-    
+    metadatas: list[Metadata] = []
+
     if chunks is None or len(chunks) == 0:
         raise IndexError("Chunks can't be empty")
     else:
@@ -21,9 +31,4 @@ def add_chunks(chunks: list[DocumentChunk]) -> None:
         documents.append(chunk.text)
         metadatas.append(chunk.chunk_metadata.model_dump())
 
-    collection.add(
-        ids=ids,
-        embeddings=embeddings,
-        metadatas=metadatas,
-        documents=documents
-    )
+    collection.add(ids=ids, embeddings=embeddings, metadatas=metadatas, documents=documents)

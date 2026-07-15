@@ -75,3 +75,6 @@ select = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["rag"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/rag/chunker.py" = ["E501"]
