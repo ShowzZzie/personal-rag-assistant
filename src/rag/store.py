@@ -1,15 +1,15 @@
+import uuid
 from typing import TYPE_CHECKING
 
 import chromadb
 
 from rag.embedder import get_embedding
+from rag.schemas import ChunkMetadata, DocumentChunk, RetrievedChunk
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from chromadb.api.types import Metadata
-
-    from rag.schemas import DocumentChunk
 
 chroma_client = chromadb.Client()
 
@@ -23,12 +23,57 @@ def add_chunks(chunks: list[DocumentChunk]) -> None:
     if chunks is None or len(chunks) == 0:
         raise IndexError("Chunks can't be empty")
     else:
-        collection = chroma_client.get_or_create_collection(name=chunks[0].collection)
+        collection = chroma_client.get_or_create_collection(
+            name=chunks[0].collection,
+            metadata={"hnsw:space": "cosine"}
+        )
 
     for chunk in chunks:
         ids.append(str(chunk.chunk_id))
         embeddings.append(get_embedding(chunk.text))
         documents.append(chunk.text)
-        metadatas.append(chunk.chunk_metadata.model_dump())
+        meta = chunk.chunk_metadata.model_dump()
+        meta["document_id"] = chunk.document_id
+        meta["chunk_index"] = chunk.chunk_index
+        metadatas.append(meta)
 
     collection.add(ids=ids, embeddings=embeddings, metadatas=metadatas, documents=documents)
+
+
+def query_by_vector(vector: list[float], collection_query: str, top_k: int) -> list[RetrievedChunk]:
+    collection = chroma_client.get_or_create_collection(
+        name=collection_query,
+        metadata={"hnsw:space": "cosine"}
+    )
+    query_vectors: list[Sequence[float]] = [vector]
+
+    result = collection.query(
+        query_embeddings=query_vectors,
+        n_results=top_k
+        )
+    
+    results_to_return = []
+    assert result["documents"]
+    assert result["distances"]
+    assert result["metadatas"]
+
+    for i, id in enumerate(result["ids"][0]):
+        results_to_return.append(RetrievedChunk(
+            chunk=DocumentChunk(
+                chunk_id=uuid.UUID(id),
+                document_id=result["metadatas"][0][i]["document_id"],
+                collection=collection_query,
+                text=result["documents"][0][i],
+                chunk_index=result["metadatas"][0][i]["chunk_index"],
+                chunk_metadata=ChunkMetadata(
+                    source_file=result["metadatas"][0][i]["source_file"],
+                    page_number=result["metadatas"][0][i]["page_number"],
+                    char_start=result["metadatas"][0][i]["char_start"],
+                    char_end=result["metadatas"][0][i]["char_end"]
+                )
+            ),
+            score=1-result["distances"][0][i],
+            rank=i+1
+        ))
+    
+    return results_to_return
