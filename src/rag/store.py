@@ -2,6 +2,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 import chromadb
+from chromadb.errors import NotFoundError
 
 from rag.embedder import get_embedding
 from rag.schemas import ChunkMetadata, DocumentChunk, RetrievedChunk
@@ -77,3 +78,11 @@ def query_by_vector(vector: list[float], collection_query: str, top_k: int) -> l
         ))
     
     return results_to_return
+
+
+
+def delete_collection(collection_name: str) -> None:
+    try:
+        chroma_client.delete_collection(collection_name)
+    except NotFoundError as err:
+        raise ValueError(f"[store:delete_collection] DELETE FAILED: {err}") from err

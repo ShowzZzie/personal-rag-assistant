@@ -1,4 +1,6 @@
 import uuid
+
+from chromadb.errors import NotFoundError
 from rag.schemas import DocumentChunk, ChunkMetadata
 import rag.embedder, rag.store
 from types import SimpleNamespace as sn
@@ -70,3 +72,31 @@ def test_query_by_vector(monkeypatch):
     assert all(r_chunk.score == pytest.approx(0.0) for r_chunk in result_2[1:])
     assert all(r_chunk.rank in [2, 3] for r_chunk in result_2[1:])
     assert all(r_chunk.chunk.text in ["text one", "text three"] for r_chunk in result_2[1:])
+
+
+def test_successful_delete_collection(monkeypatch):
+    def mock_embed(input: str, model: str):
+        resp = sn(data=[sn(embedding=[-0.1, 0.23, -0.004, 1.2])])
+        return resp
+
+    document_chunks = [
+        DocumentChunk(chunk_id=str(uuid.uuid4()), document_id="t123", collection="t_collection", text="Random text", chunk_index=0, chunk_metadata=ChunkMetadata(source_file="xyz", page_number=1, char_start=1, char_end=100)),
+        DocumentChunk(chunk_id=str(uuid.uuid4()), document_id="t456", collection="t_collection", text="Random text 123 ra", chunk_index=1, chunk_metadata=ChunkMetadata(source_file="xyz", page_number=2, char_start=1000, char_end=3456))
+    ]
+    
+    monkeypatch.setattr(rag.embedder.client.embeddings, "create", mock_embed)
+
+    rag.store.add_chunks(document_chunks)
+    collection = client.get_or_create_collection(name="t_collection")
+    assert collection
+
+    rag.store.delete_collection("t_collection")
+
+    with pytest.raises(NotFoundError) as e:
+        rag.store.chroma_client.get_collection("t_collection")
+    assert "does not exist" in str(e.value)
+
+def test_failed_delete_collection():
+    with pytest.raises(ValueError) as e:
+        rag.store.delete_collection("t_collection")
+    assert "DELETE FAILED" in str(e.value)
