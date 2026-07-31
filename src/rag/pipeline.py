@@ -2,6 +2,7 @@
 
 import pathlib
 import uuid
+from typing import TYPE_CHECKING
 
 from pypdf import PdfReader
 from sqlmodel import Session, SQLModel, create_engine
@@ -10,21 +11,25 @@ from rag.chunker import chunker_recursive
 from rag.schemas import Document
 from rag.store import add_chunks
 
+if TYPE_CHECKING:
+    from sqlalchemy import Engine
+
 DEFAULT_CHUNK_SIZE = 500 # placeholder pre-config
 DEFAULT_CHUNK_OVERLAP = 50 # placeholder pre-config
 EMBEDDING_MODEL_NAME = "text-embedding-3-small" # placeholder pre-config
 
 sqlite_db_filename = "database.db"
 sqlite_db_uri = f"sqlite:///data/{sqlite_db_filename}"
-engine = create_engine(sqlite_db_uri, echo=True)
+sqlite_engine = create_engine(sqlite_db_uri, echo=True)
 
-SQLModel.metadata.create_all(engine)
+SQLModel.metadata.create_all(sqlite_engine)
 
 def ingest(
     file: str,
     collection: str,
     size: int = DEFAULT_CHUNK_SIZE,
-    overlap: int = DEFAULT_CHUNK_OVERLAP
+    overlap: int = DEFAULT_CHUNK_OVERLAP,
+    engine: Engine = sqlite_engine
     ) -> Document:
     reader = PdfReader(file)
     page_list: list[str] = []
