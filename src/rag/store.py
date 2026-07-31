@@ -36,6 +36,7 @@ def add_chunks(chunks: list[DocumentChunk]) -> None:
         meta = chunk.chunk_metadata.model_dump()
         meta["document_id"] = chunk.document_id
         meta["chunk_index"] = chunk.chunk_index
+        meta = {k: v for k, v in meta.items() if v is not None}
         metadatas.append(meta)
 
     collection.add(ids=ids, embeddings=embeddings, metadatas=metadatas, documents=documents)
@@ -68,7 +69,7 @@ def query_by_vector(vector: list[float], collection_query: str, top_k: int) -> l
                 chunk_index=result["metadatas"][0][i]["chunk_index"],
                 chunk_metadata=ChunkMetadata(
                     source_file=result["metadatas"][0][i]["source_file"],
-                    page_number=result["metadatas"][0][i]["page_number"],
+                    page_number=result["metadatas"][0][i].get("page_number"),
                     char_start=result["metadatas"][0][i]["char_start"],
                     char_end=result["metadatas"][0][i]["char_end"]
                 )
