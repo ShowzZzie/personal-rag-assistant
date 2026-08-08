@@ -2,8 +2,7 @@ from types import SimpleNamespace as sn
 import rag.embedder, rag.retriever, rag.store
 from rag.schemas import DocumentChunk
 import uuid, pytest
-
-client = rag.store.chroma_client
+import chromadb
 
 def test_retrieve(monkeypatch):
 
@@ -20,6 +19,7 @@ def test_retrieve(monkeypatch):
     def mock_embed(input: str, model: str):
         return sn(data=[sn(embedding=text_to_vec[input])])
     monkeypatch.setattr(rag.embedder.client.embeddings, "create", mock_embed)
+    monkeypatch.setattr(rag.store, "chroma_persistent_client", chromadb.Client())
 
     doc_chunks=[
         DocumentChunk(chunk_id=str(uuid.uuid4()), document_id="t123", collection="ret_collection", text="text one", chunk_index=0, chunk_metadata=rag.store.ChunkMetadata(source_file="xyz", page_number=1, char_start=1, char_end=100)),

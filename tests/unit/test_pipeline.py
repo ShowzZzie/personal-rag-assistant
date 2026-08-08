@@ -2,6 +2,7 @@ from sqlmodel import create_engine, SQLModel, Session, select
 import rag.pipeline, rag.embedder, rag.store
 from types import SimpleNamespace as sn
 from rag.schemas import Document
+import chromadb
 
 TEST_DATABASE = "sqlite://"
 test_engine = create_engine(TEST_DATABASE)
@@ -13,6 +14,7 @@ def test_ingest(monkeypatch):
         resp = sn(data=[sn(embedding=[-0.1, 0.23, -0.004, 1.2])])
         return resp
     monkeypatch.setattr(rag.embedder.client.embeddings, "create", mock_embed)
+    monkeypatch.setattr(rag.store, "chroma_persistent_client", chromadb.Client())
     
     # call rag.pipeline.ingest(file, collection, engine=test_engine)
     ingest_result = rag.pipeline.ingest("tests/data/czarnogora_notatki.pdf", "test_collection", engine=test_engine)
@@ -21,7 +23,7 @@ def test_ingest(monkeypatch):
     assert ingest_result.chunk_count > 0
     
     # assert Chroma collection has matching chunk count
-    collection = rag.store.chroma_client.get_or_create_collection("test_collection")
+    collection = rag.store.chroma_persistent_client.get_or_create_collection("test_collection")
     assert collection.count() == ingest_result.chunk_count
 
     

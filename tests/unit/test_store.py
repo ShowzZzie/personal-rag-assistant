@@ -1,12 +1,13 @@
 import uuid
 
+import chromadb
 from chromadb.errors import NotFoundError
 from rag.schemas import DocumentChunk, ChunkMetadata
 import rag.embedder, rag.store
 from types import SimpleNamespace as sn
 import pytest
 
-client = rag.store.chroma_client
+client = chromadb.Client()
 
 def test_add_chunks(monkeypatch):
 
@@ -21,7 +22,7 @@ def test_add_chunks(monkeypatch):
     
     monkeypatch.setattr(rag.embedder.client.embeddings, "create", mock_embed)
 
-    rag.store.add_chunks(document_chunks)
+    rag.store.add_chunks(document_chunks, client)
     collection = client.get_or_create_collection(name="t_collection")
     recs = collection.get()
     
@@ -33,7 +34,7 @@ def test_add_chunks(monkeypatch):
 
 def test_add_chunks_empty_list():
     with pytest.raises(IndexError) as err:
-        rag.store.add_chunks([])
+        rag.store.add_chunks([], client)
     assert "empty" in str(err)
 
 
@@ -55,15 +56,15 @@ def test_query_by_vector(monkeypatch):
     ]
 
     monkeypatch.setattr(rag.embedder.client.embeddings, "create", mock_embed)
-    rag.store.add_chunks(doc_chunks)
-    result_1 = rag.store.query_by_vector([1,0,0], "vec_collection", 1)
+    rag.store.add_chunks(doc_chunks, client)
+    result_1 = rag.store.query_by_vector([1,0,0], "vec_collection", 1, client)
 
     assert len(result_1) == 1
     assert result_1[0].score == pytest.approx(1.0)
     assert result_1[0].chunk.text == "text one"
     assert result_1[0].rank == 1
 
-    result_2 = rag.store.query_by_vector([0,1,0], "vec_collection", 3)
+    result_2 = rag.store.query_by_vector([0,1,0], "vec_collection", 3, client)
     
     assert len(result_2) == 3
     assert result_2[0].score == pytest.approx(1.0)
@@ -86,17 +87,17 @@ def test_successful_delete_collection(monkeypatch):
     
     monkeypatch.setattr(rag.embedder.client.embeddings, "create", mock_embed)
 
-    rag.store.add_chunks(document_chunks)
+    rag.store.add_chunks(document_chunks, client)
     collection = client.get_or_create_collection(name="t_collection")
     assert collection
 
-    rag.store.delete_collection("t_collection")
+    rag.store.delete_collection("t_collection", client)
 
     with pytest.raises(NotFoundError) as e:
-        rag.store.chroma_client.get_collection("t_collection")
+        client.get_collection("t_collection")
     assert "does not exist" in str(e.value)
 
 def test_failed_delete_collection():
     with pytest.raises(ValueError) as e:
-        rag.store.delete_collection("t_collection")
+        rag.store.delete_collection("t_collection", client)
     assert "DELETE FAILED" in str(e.value)

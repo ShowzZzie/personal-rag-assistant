@@ -10,21 +10,25 @@ from rag.schemas import ChunkMetadata, DocumentChunk, RetrievedChunk
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from chromadb.api import ClientAPI
     from chromadb.api.types import Metadata
 
-chroma_client = chromadb.Client()
+chroma_persistent_client = chromadb.PersistentClient(path="data/chroma")
 
 
-def add_chunks(chunks: list[DocumentChunk]) -> None:
+def add_chunks(chunks: list[DocumentChunk], client: ClientAPI | None = None) -> None:
     ids: list[str] = []
     embeddings: list[Sequence[float]] = []
     documents: list[str] = []
     metadatas: list[Metadata] = []
 
+    if client is None:
+        client = chroma_persistent_client
+
     if chunks is None or len(chunks) == 0:
         raise IndexError("Chunks can't be empty")
     else:
-        collection = chroma_client.get_or_create_collection(
+        collection = client.get_or_create_collection(
             name=chunks[0].collection,
             metadata={"hnsw:space": "cosine"}
         )
@@ -42,11 +46,20 @@ def add_chunks(chunks: list[DocumentChunk]) -> None:
     collection.add(ids=ids, embeddings=embeddings, metadatas=metadatas, documents=documents)
 
 
-def query_by_vector(vector: list[float], collection_query: str, top_k: int) -> list[RetrievedChunk]:
-    collection = chroma_client.get_or_create_collection(
+def query_by_vector(
+    vector: list[float],
+    collection_query: str,
+    top_k: int,
+    client: ClientAPI | None = None
+    ) -> list[RetrievedChunk]:
+    if client is None:
+        client = chroma_persistent_client
+    
+    collection = client.get_or_create_collection(
         name=collection_query,
         metadata={"hnsw:space": "cosine"}
     )
+
     query_vectors: list[Sequence[float]] = [vector]
 
     result = collection.query(
@@ -82,8 +95,11 @@ def query_by_vector(vector: list[float], collection_query: str, top_k: int) -> l
 
 
 
-def delete_collection(collection_name: str) -> None:
+def delete_collection(collection_name: str, client: ClientAPI | None = None) -> None:
+    if client is None:
+        client = chroma_persistent_client
+
     try:
-        chroma_client.delete_collection(collection_name)
+        client.delete_collection(collection_name)
     except NotFoundError as err:
         raise ValueError(f"[store:delete_collection] DELETE FAILED: {err}") from err

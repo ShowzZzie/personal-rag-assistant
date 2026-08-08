@@ -5,6 +5,7 @@ import rag.store
 import rag.synthesizer
 import rag.query
 from types import SimpleNamespace as sn
+import chromadb
 
 def test_query(monkeypatch):
 
@@ -13,6 +14,7 @@ def test_query(monkeypatch):
         resp = sn(data=[sn(embedding=[-0.1, 0.23, -0.004, 1.2])])
         return resp
     monkeypatch.setattr(rag.embedder.client.embeddings, "create", mock_embed)
+    monkeypatch.setattr(rag.store, "chroma_persistent_client", chromadb.Client())
 
     # mock Anthropic client call
     def mock_anthropic_create(max_tokens: int, messages: list[dict[str,str]], model: str):

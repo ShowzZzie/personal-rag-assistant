@@ -20,7 +20,7 @@ EMBEDDING_MODEL_NAME = "text-embedding-3-small" # placeholder pre-config
 
 sqlite_db_filename = "database.db"
 sqlite_db_uri = f"sqlite:///data/{sqlite_db_filename}"
-sqlite_engine = create_engine(sqlite_db_uri, echo=True)
+sqlite_engine = create_engine(sqlite_db_uri)
 
 SQLModel.metadata.create_all(sqlite_engine)
 
