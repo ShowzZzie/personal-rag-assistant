@@ -6,10 +6,12 @@ import rag.synthesizer
 if TYPE_CHECKING:
     from rag.schemas import Answer, RetrievedChunk
 
+DEFAULT_TOP_K = 5
+
 def query(
     user_query: str,
     user_collection: str,
-    user_top_k: int = 5,
+    user_top_k: int = DEFAULT_TOP_K,
 ) -> Answer:
     
     retrieve_result: list[RetrievedChunk] = rag.retriever.retrieve(

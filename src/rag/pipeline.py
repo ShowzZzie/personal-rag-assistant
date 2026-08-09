@@ -5,7 +5,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from pypdf import PdfReader
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 
 from rag.chunker import chunker_recursive
 from rag.schemas import Document
@@ -67,3 +67,40 @@ def ingest(
         session.refresh(document)
     
     return document
+
+
+def query_by_collection(
+    collection: str,
+    engine: Engine = sqlite_engine
+    ) -> list[Document]:
+    
+    with Session(engine) as session:
+        stmnt = select(Document).where(Document.collection==collection)
+        rslt = session.exec(stmnt).all()
+        return list(rslt)
+
+
+def query_by_id(
+    doc_id: int,
+    engine: Engine = sqlite_engine
+    ) -> Document:
+
+    with Session(engine) as session:
+        stmnt = select(Document).where(Document.id==doc_id)
+        rslt = session.exec(stmnt).first()
+        if rslt is None:
+            raise ValueError("File not found")
+        return rslt
+
+
+def get_collections_counts(engine: Engine = sqlite_engine) -> dict[str, int]:
+    with Session(engine) as session:
+        stmnt = select(Document.collection).distinct()
+        rslt = list(session.exec(stmnt).all())
+        result_dict = {}
+        for col in rslt:
+            stmnt_count = select(Document).where(Document.collection==col)
+            rslt_count = len(session.exec(stmnt_count).all())
+            result_dict[col] = rslt_count
+
+        return result_dict
