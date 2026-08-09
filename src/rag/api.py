@@ -8,7 +8,13 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from rag.pipeline import get_collections_counts, ingest, query_by_id, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP
+from rag.pipeline import (
+    DEFAULT_CHUNK_OVERLAP,
+    DEFAULT_CHUNK_SIZE,
+    get_collections_counts,
+    ingest,
+    query_by_id,
+)
 from rag.query import DEFAULT_TOP_K, query
 from rag.schemas import Answer, Document
 
