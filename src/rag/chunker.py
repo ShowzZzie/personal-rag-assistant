@@ -107,7 +107,7 @@ def chunker_recursive(
             )
             result.extend(rec_result)
             n_id += len(rec_result)
-        elif block != "":
+        elif block.strip() != "":
             result.append(
                 DocumentChunk(
                     chunk_id=uuid.uuid4(),
