@@ -16,6 +16,10 @@ def chunker_fixed_size(
     char_start = 0
 
     while len(document) > 0:
+        if document[:size].strip() == "":
+            document = document[size - overlap :]
+            char_start = char_start + size - overlap
+            continue
         result.append(
             DocumentChunk(
                 chunk_id=uuid.uuid4(),
@@ -31,6 +35,8 @@ def chunker_fixed_size(
                 ),
             )
         )
+        if len(document[size - overlap:]) <= overlap:
+            break
         document = document[size - overlap :]
         n_id += 1
         char_start = char_start + size - overlap

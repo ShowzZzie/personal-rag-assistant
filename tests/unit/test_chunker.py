@@ -71,3 +71,18 @@ def test_chunker_recursive_fallback_fixed_size():
     assert len(chunks[1].text) == 200
     assert len(chunks[2].text) == 75
     assert all(chunk.collection == "tc" for chunk in chunks)
+
+def test_chunker_fixed_size_whitespace_only_blocks():
+    text = "abc     def"
+    chunks = chunker_fixed_size(text, "test", "123", "tc", 3, 1)
+    # abc
+    # c__
+    # ___
+    # __d
+    # def
+    assert len(chunks)==4
+    assert len(chunks[0].text) == 3
+    assert len(chunks[1].text) == 3
+    assert len(chunks[2].text) == 3
+    assert len(chunks[3].text) == 3
+    assert all(chunk.text.strip() != "" for chunk in chunks)
