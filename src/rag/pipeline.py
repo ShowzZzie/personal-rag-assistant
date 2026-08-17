@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from pypdf import PdfReader
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from rag.chunker import chunker_recursive
+from rag.chunker import chunker_fixed_size, chunker_recursive
 from rag.schemas import ChunkMetadata, Document, DocumentChunk
 from rag.store import add_chunks
 
@@ -60,8 +60,23 @@ def join_small_chunks(
             current_group.append(lookup_chunk)
             temp_chunk = (temp_chunk + " " + lookup_chunk.text).strip()
         else:
-            new_chunks.append(flush(current_group, temp_chunk, chunk_index))
-            chunk_index+=1
+            if len(chunks[0].text) > size:
+                cnk = chunks.pop(0)
+                cfs_result = chunker_fixed_size(
+                    document=cnk.text,
+                    filename=cnk.chunk_metadata.source_file,
+                    document_id=cnk.document_id,
+                    collection=cnk.collection,
+                    size=size,
+                    overlap=overlap
+                )
+                for chunk in cfs_result:
+                    chunk.chunk_index=chunk_index
+                    chunk_index+=1
+                new_chunks.extend(cfs_result)
+            else:
+                new_chunks.append(flush(current_group, temp_chunk, chunk_index))
+                chunk_index+=1
 
             seed: list[DocumentChunk] = []
             seed_len = 0
@@ -70,6 +85,10 @@ def join_small_chunks(
                     break
                 seed.insert(0, frag)
                 seed_len += len(frag.text)
+
+            if chunks and seed_len + len(chunks[0].text) > size:
+                seed = []
+                seed_len = 0
 
             current_group = seed
             temp_chunk = " ".join(f.text for f in seed).strip()
@@ -103,7 +122,7 @@ def ingest(
         collection=collection,
         size=size,
         overlap=overlap,
-        recursive_order=["\n\n", "\n", "."]
+        recursive_order=["\n\n", "\n", ". "]
     )
 
     jsc_chunking_result = join_small_chunks(chunking_result, size, overlap)
