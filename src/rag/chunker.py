@@ -31,7 +31,7 @@ def chunker_fixed_size(
                     source_file=filename,
                     page_number=None,
                     char_start=char_start,
-                    char_end=char_start + size - 1,
+                    char_end=char_start + len(document[:size]) - 1,
                 ),
             )
         )
@@ -51,11 +51,9 @@ def chunker_sentence_aware(
     individual_sentences = [sent for sent in nlp(document).sents]
     result = []
     n_id = 0
-    char_start = 0
 
     while len(individual_sentences) > 0:
         chunk = individual_sentences[:size]
-        chunk_length = sum(len(x.text) for x in chunk)
 
         result.append(
             DocumentChunk(
@@ -67,13 +65,12 @@ def chunker_sentence_aware(
                 chunk_metadata=ChunkMetadata(
                     source_file=filename,
                     page_number=None,
-                    char_start=char_start,
-                    char_end=char_start + chunk_length - 1,
+                    char_start=chunk[0].start_char,
+                    char_end=chunk[-1].end_char - 1,
                 ),
             )
         )
         n_id += 1
-        char_start += chunk_length
         individual_sentences = individual_sentences[size - overlap :]
 
     return result
@@ -97,8 +94,13 @@ def chunker_recursive(
     result = []
     splitter = recursive_order[0]
     blocks = document.split(splitter)
+    cursor = 0
 
     for block in blocks:
+        doc_find = document.find(block, cursor)
+        block_start = char_start + doc_find
+        cursor = doc_find + len(block)
+
         if len(block) > size:
             rec_result = chunker_recursive(
                 block,
@@ -109,7 +111,7 @@ def chunker_recursive(
                 overlap,
                 recursive_order[1:],
                 n_id,
-                char_start,
+                block_start,
             )
             result.extend(rec_result)
             n_id += len(rec_result)
@@ -124,13 +126,12 @@ def chunker_recursive(
                     chunk_metadata=ChunkMetadata(
                         source_file=filename,
                         page_number=None,
-                        char_start=char_start,
-                        char_end=char_start + len(block) - 1,
+                        char_start=block_start,
+                        char_end=block_start + len(block) - 1,
                     ),
                 )
             )
             n_id += 1
-        char_start = char_start + len(block) + len(splitter)  # char_start needs fixing
 
     return result
 
