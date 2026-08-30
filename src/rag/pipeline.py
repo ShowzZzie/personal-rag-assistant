@@ -14,8 +14,8 @@ from rag.store import add_chunks
 if TYPE_CHECKING:
     from sqlalchemy import Engine
 
-DEFAULT_CHUNK_SIZE = 500 # placeholder pre-config
-DEFAULT_CHUNK_OVERLAP = 50 # placeholder pre-config
+DEFAULT_CHUNK_SIZE = 1500 # placeholder pre-config
+DEFAULT_CHUNK_OVERLAP = 150 # placeholder pre-config
 EMBEDDING_MODEL_NAME = "text-embedding-3-small" # placeholder pre-config
 
 sqlite_db_filename = "database.db"
