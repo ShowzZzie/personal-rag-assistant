@@ -53,6 +53,7 @@ strict = true
 mypy_path = "src"
 packages = ["rag"]
 warn_unused_configs = true
+plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 module = ["chromadb.*", "langfuse.*"]
