@@ -87,7 +87,7 @@ Chroma's collection is created with `metadata={"hnsw:space": "cosine"}` so dista
 Three strategies are implemented in `src/rag/chunker.py`:
 
 - **Fixed-size** (`chunker_fixed_size`) — hard character-count windows with overlap. No awareness of sentence or paragraph boundaries.
-- **Sentence-aware** (`chunker_sentence_aware`) — uses spaCy (`en_core_web_sm`) to split into sentences, then groups sentences up to the size limit. Preserves sentence boundaries at the cost of variable chunk sizes.
+- **Sentence-aware** (`chunker_sentence_aware`) — uses spaCy (model configurable via `SPACY_MODEL`, default `en_core_web_sm`) to split into sentences, then groups sentences up to the size limit. Preserves sentence boundaries at the cost of variable chunk sizes.
 - **Recursive** (`chunker_recursive`) — **default**, used by `ingest()`. Splits on a separator list (`["\n\n", "\n", ". "]`) in order: try paragraph breaks first, then line breaks, then sentence breaks, recursing into any block still over `size` before falling back to fixed-size hard splitting.
 
 ### Why `join_small_chunks` exists
