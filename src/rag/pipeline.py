@@ -1,6 +1,7 @@
 # PHASE 2: pipeline.py — ingest: parse PDF → chunk → embed → store → record metadata
 
 import pathlib
+import re
 import uuid
 from typing import TYPE_CHECKING
 
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
 DEFAULT_CHUNK_SIZE = 1500 # placeholder pre-config
 DEFAULT_CHUNK_OVERLAP = 150 # placeholder pre-config
 EMBEDDING_MODEL_NAME = "text-embedding-3-small" # placeholder pre-config
+CITATION_PATTERN = re.compile(r"\d{4};\s*\d+\s*\(")
 
 sqlite_db_filename = "database.db"
 sqlite_db_uri = f"sqlite:///data/{sqlite_db_filename}"
@@ -98,6 +100,11 @@ def join_small_chunks(
 
     return new_chunks
 
+def is_reference_chunk(text: str, threshold: float = 0.10) -> bool:
+    if not text:
+        return False
+    return len(CITATION_PATTERN.findall(text)) / (len(text) / 100) > threshold
+
 def ingest(
     file: str,
     collection: str,
@@ -126,7 +133,10 @@ def ingest(
     )
 
     jsc_chunking_result = join_small_chunks(chunking_result, size, overlap)
-    add_chunks(jsc_chunking_result)
+
+    citation_removal_result = [c for c in jsc_chunking_result if not is_reference_chunk(c.text)]
+
+    add_chunks(citation_removal_result)
     
     # metadata sqlite
     with Session(engine) as session:
@@ -134,7 +144,7 @@ def ingest(
             document_id=doc_id,
             collection=collection,
             filename=file_name,
-            chunk_count=len(jsc_chunking_result),
+            chunk_count=len(citation_removal_result),
             embedding_model=EMBEDDING_MODEL_NAME
         )
         session.add(document)
