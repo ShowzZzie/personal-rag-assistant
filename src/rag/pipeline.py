@@ -9,20 +9,16 @@ from pypdf import PdfReader
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from rag.chunker import chunker_fixed_size, chunker_recursive
+from rag.config import settings
 from rag.schemas import ChunkMetadata, Document, DocumentChunk
 from rag.store import add_chunks
 
 if TYPE_CHECKING:
     from sqlalchemy import Engine
 
-DEFAULT_CHUNK_SIZE = 1500 # placeholder pre-config
-DEFAULT_CHUNK_OVERLAP = 150 # placeholder pre-config
-EMBEDDING_MODEL_NAME = "text-embedding-3-small" # placeholder pre-config
 CITATION_PATTERN = re.compile(r"\d{4};\s*\d+\s*\(")
 
-sqlite_db_filename = "database.db"
-sqlite_db_uri = f"sqlite:///data/{sqlite_db_filename}"
-sqlite_engine = create_engine(sqlite_db_uri)
+sqlite_engine = create_engine(settings.sqlite_db_uri)
 
 SQLModel.metadata.create_all(sqlite_engine)
 
@@ -100,7 +96,7 @@ def join_small_chunks(
 
     return new_chunks
 
-def is_reference_chunk(text: str, threshold: float = 0.10) -> bool:
+def is_reference_chunk(text: str, threshold: float = settings.reference_citation_threshold) -> bool:
     if not text:
         return False
     return len(CITATION_PATTERN.findall(text)) / (len(text) / 100) > threshold
@@ -108,8 +104,8 @@ def is_reference_chunk(text: str, threshold: float = 0.10) -> bool:
 def ingest(
     file: str,
     collection: str,
-    size: int = DEFAULT_CHUNK_SIZE,
-    overlap: int = DEFAULT_CHUNK_OVERLAP,
+    size: int = settings.chunk_size,
+    overlap: int = settings.chunk_overlap,
     engine: Engine = sqlite_engine
     ) -> Document:
     reader = PdfReader(file)
@@ -145,7 +141,7 @@ def ingest(
             collection=collection,
             filename=file_name,
             chunk_count=len(citation_removal_result),
-            embedding_model=EMBEDDING_MODEL_NAME
+            embedding_model=settings.embedding_model
         )
         session.add(document)
         session.commit()

@@ -2,9 +2,10 @@ import uuid
 
 import spacy
 
+from rag.config import settings
 from rag.schemas import ChunkMetadata, DocumentChunk
 
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load(settings.spacy_model)
 
 
 def chunker_fixed_size(

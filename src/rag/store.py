@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import chromadb
 from chromadb.errors import NotFoundError
 
+from rag.config import settings
 from rag.embedder import get_embedding
 from rag.schemas import ChunkMetadata, DocumentChunk, RetrievedChunk
 
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from chromadb.api import ClientAPI
     from chromadb.api.types import Metadata
 
-chroma_persistent_client = chromadb.PersistentClient(path="data/chroma")
+chroma_persistent_client = chromadb.PersistentClient(path=settings.chroma_path)
 
 
 def add_chunks(chunks: list[DocumentChunk], client: ClientAPI | None = None) -> None:

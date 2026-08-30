@@ -1,14 +1,11 @@
-import os
-
-from dotenv import load_dotenv
 from openai import OpenAI
 
-load_dotenv()
+from rag.config import settings
 
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+client = OpenAI(api_key=settings.openai_api_key)
 
 
-def get_embedding(text: str, model: str = "text-embedding-3-small") -> list[float]:
+def get_embedding(text: str, model: str = settings.embedding_model) -> list[float]:
 
     if len(text.strip()) == 0:
         raise ValueError("Embedding string can't be empty")

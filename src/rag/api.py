@@ -8,21 +8,20 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from rag.config import settings
 from rag.pipeline import (
-    DEFAULT_CHUNK_OVERLAP,
-    DEFAULT_CHUNK_SIZE,
     get_collections_counts,
     ingest,
     query_by_id,
 )
-from rag.query import DEFAULT_TOP_K, query
+from rag.query import query
 from rag.schemas import Answer, Document
 
 
 class QueryBody(BaseModel):
     question: str
     collection: str
-    top_k: int = DEFAULT_TOP_K # waiting for config.py
+    top_k: int = settings.top_k
 
 app = FastAPI()
 
@@ -30,8 +29,8 @@ app = FastAPI()
 async def post_ingest_api(
     file: UploadFile,
     collection: str,
-    size: int = DEFAULT_CHUNK_SIZE,
-    overlap: int = DEFAULT_CHUNK_OVERLAP
+    size: int = settings.chunk_size,
+    overlap: int = settings.chunk_overlap
     ) -> Document:
 
     content = await file.read()

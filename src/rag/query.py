@@ -2,16 +2,15 @@ from typing import TYPE_CHECKING
 
 import rag.retriever
 import rag.synthesizer
+from rag.config import settings
 
 if TYPE_CHECKING:
     from rag.schemas import Answer, RetrievedChunk
 
-DEFAULT_TOP_K = 5
-
 def query(
     user_query: str,
     user_collection: str,
-    user_top_k: int = DEFAULT_TOP_K,
+    user_top_k: int = settings.top_k,
 ) -> Answer:
     
     retrieve_result: list[RetrievedChunk] = rag.retriever.retrieve(

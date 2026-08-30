@@ -1,19 +1,15 @@
-import os
-
 from anthropic import Anthropic
-from dotenv import load_dotenv
 
+from rag.config import settings
 from rag.schemas import Answer, RetrievedChunk
 
-load_dotenv()
-
-client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+client = Anthropic(api_key=settings.anthropic_api_key)
 
 def synthesize(
     user_question: str,
     source_chunks: list[RetrievedChunk],
     collection: str,
-    model: str = "claude-haiku-4-5",
+    model: str = settings.synthesis_model,
 ) -> Answer:
 
     source_lines: list[str] = []
@@ -25,7 +21,7 @@ def synthesize(
     sources = "\n".join(source_lines)
 
     message = client.messages.create(
-        max_tokens=1024, # to be replaced later by Config value,
+        max_tokens=settings.synthesis_max_tokens,
         messages=[
             {
                 "role": "user",
