@@ -59,6 +59,11 @@ def ask(
     )
 
     print("ANSWER: ", result.answer)
+    if result.cost_usd is None:
+        print("PRICE: insufficient model pricing data")
+    else:
+        print("PRICE: ", f"${result.cost_usd:.6f}")
+        
     if show_sources:
         source_lines: list[str] = []
         for i, chunk in enumerate(result.sources):

@@ -44,4 +44,5 @@ class Answer(SQLModel):
     input_tokens: int
     output_tokens: int
     collection: str
+    cost_usd: float | None = None
     retrieved_at: datetime = Field(default_factory=datetime.now)

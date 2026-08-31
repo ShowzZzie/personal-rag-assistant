@@ -1,6 +1,6 @@
 from rag.retriever import retrieve
 from rag.store import chroma_persistent_client
-
+import pytest
 
 GOLDEN_PAIRS: list[dict[str,str]] = [
     {
@@ -87,7 +87,7 @@ def find_targets(phrase: str) -> set[tuple[str, int]]:
     }
 
 
-
+@pytest.mark.evals
 def test_ret_evals():
     hits = 0
 

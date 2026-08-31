@@ -1,5 +1,6 @@
 from anthropic import Anthropic
 
+from rag import config
 from rag.config import settings
 from rag.schemas import Answer, RetrievedChunk
 
@@ -34,6 +35,16 @@ def synthesize(
 
     assert message.content[0].type == "text"
 
+    pricing = config.MODEL_PRICING.get(model)
+    if pricing is None:
+        cost = None
+    else:
+        input_price, output_price = pricing
+        cost = (
+            message.usage.input_tokens * input_price / 1_000_000
+            + message.usage.output_tokens * output_price / 1_000_000
+        )
+
     final_answer = Answer(
         question = user_question,
         answer = message.content[0].text,
@@ -41,6 +52,7 @@ def synthesize(
         model = model,
         input_tokens = message.usage.input_tokens,
         output_tokens = message.usage.output_tokens,
+        cost_usd = cost,
         collection = collection,
     )
 

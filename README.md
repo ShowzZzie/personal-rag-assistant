@@ -61,6 +61,8 @@ rag ingest --dir path/to/pdfs/ --collection sleep
 rag ask "how much sleep should I be getting?" --collection sleep --show-sources
 ```
 
+`rag ask` prints the cost of the query alongside the answer. Cost is computed in `synthesizer.py` from the response's token counts and per-model base rates in `MODEL_PRICING` (`src/rag/config.py`, USD per MTok, as of 2026-08). A real query against the shipped config (1500-char chunks, `top_k=5`, `claude-haiku-4-5`) costs about **$0.0027**. If the synthesis model isn't in `MODEL_PRICING`, `Answer.cost_usd` is `None` and the CLI prints `insufficient model pricing data` rather than reporting `$0`.
+
 ### API
 
 ```bash
@@ -96,6 +98,8 @@ PDF text extraction breaks lines at every visual line wrap, not just at paragrap
 
 ## Evals
 
+Both eval suites are marked `@pytest.mark.evals` and excluded from the default run via `addopts = "-m 'not evals'"` in `pyproject.toml`. `pytest tests/` runs 26 deterministic tests; `pytest -m evals` runs the two eval suites. They're split out because the LLM-as-judge score (Layer 2, below) varies between runs on identical input, and mixing that into the default suite made it non-deterministic — a rerun could fail with no code change.
+
 ### Layer 1: retrieval (Recall@k)
 
 14 golden pairs (drafted with LLM assistance, then hand-verified against stored chunks), evaluated with **adjacency-aware Recall**: a hit counts if the retrieved chunk *or either of its neighbors* (same `document_id`) contains the target phrase. This matters because chunks overlap — the exact phrase often sits one chunk over from the one actually retrieved.
@@ -115,7 +119,7 @@ The curve has a clear shape. At 500 chars, chunks don't carry enough context for
 
 **Metric caveat:** strict substring matching (hit only if the retrieved chunk itself contains the phrase) gives 0.36 at 500/50, versus 0.43 for adjacency-aware. The gap exists because of chunk overlap — adjacency-aware credits the case where the answer legitimately lands in a neighboring chunk instead of the one holding the literal phrase. It's a real correction, not a way to inflate the number: it only moved the score by one pair at 500/50, so most of the shortfall at that size is a genuine retrieval problem, not a measurement artifact.
 
-Run it: `pytest tests/evals/test_retrieval_evals.py` (hits the real OpenAI embedding API — not mocked, since the point is measuring actual retrieval quality).
+Run it: `pytest -m evals tests/evals/test_retrieval_evals.py` (hits the real OpenAI embedding API — not mocked, since the point is measuring actual retrieval quality).
 
 ### Layer 2: answer quality (LLM-as-judge)
 
@@ -125,10 +129,11 @@ Run it: `pytest tests/evals/test_retrieval_evals.py` (hits the real OpenAI embed
 
 Most `PARTIALLY` scores came from the judge flagging that "the context doesn't contain information about X" in cases where the retrieved chunks actually did contain relevant material — i.e. the synthesizer is over-conservative and hedges rather than using context that's there. This is a synthesis-prompt problem, not a retrieval problem.
 
-Run it: `pytest tests/evals/test_answer_evals.py` (hits both the OpenAI and Anthropic APIs live — no mocking, real query → real judge).
+Run it: `pytest -m evals tests/evals/test_answer_evals.py` (hits both the OpenAI and Anthropic APIs live — no mocking, real query → real judge).
 
 ## Known limitations
 
+- **Only PDF files can be ingested.** The spec's plain-text and markdown paths aren't implemented.
 - **Ingest is slow.** Embedding calls are made one chunk at a time, sequentially. OpenAI's batch embeddings endpoint would fix this but isn't implemented.
 - **Reference-list filtering has no measured benefit.** `is_reference_chunk` in `pipeline.py` regex-matches `year;volume(` citation patterns and drops chunks where citation density exceeds 0.10 per 100 characters, removing about 7% of chunks (mostly bibliography pages). It did not measurably move Recall in either direction — it's shipped because it removes obvious noise, not because it was proven to help retrieval.
 - **3 of 14 golden pairs still miss** even at the 1500/150 config. Two are cases where retrieval found a different, topically valid chunk that the golden pair simply didn't credit (the golden-pair phrase is stricter than "correct answer"). One is a genuine miss: an abstract question phrased in everyday terms doesn't share vocabulary with the concrete clinical language in the source chunk.

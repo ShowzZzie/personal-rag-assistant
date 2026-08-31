@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -59,6 +60,7 @@ def judge_answer(question: str, chunks: str, answer: str) -> list[JudgeScore]:
     return [JudgeScore(**item) for item in blocks[0].input["scores"]]
 
 
+@pytest.mark.evals
 def test_answer_evals():
     results: list[JudgeScore] = []
 
