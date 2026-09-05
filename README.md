@@ -102,7 +102,7 @@ Both eval suites are marked `@pytest.mark.evals` and excluded from the default r
 
 ### Layer 1: retrieval (Recall@k)
 
-14 golden pairs (drafted with LLM assistance, then hand-verified against stored chunks), evaluated with **adjacency-aware Recall**: a hit counts if the retrieved chunk *or either of its neighbors* (same `document_id`) contains the target phrase. This matters because chunks overlap — the exact phrase often sits one chunk over from the one actually retrieved.
+15 golden pairs (drafted with LLM assistance, then hand-verified against stored chunks), evaluated with **adjacency-aware Recall**: a hit counts if the retrieved chunk *or either of its neighbors* (same `document_id`) contains the target phrase. This matters because chunks overlap — the exact phrase often sits one chunk over from the one actually retrieved.
 
 Chunk-size sweep, overlap held at 10% of size:
 
@@ -110,12 +110,12 @@ Chunk-size sweep, overlap held at 10% of size:
 |---|---|---|---|
 | 500/50 | 0.43 | 0.50 | 0.64 |
 | 1000/100 | 0.57 | 0.71 | 0.93 |
-| 1500/150 | **0.79** | **0.86** | 0.93 |
+| 1500/150 | **0.80** | **0.87** | **1.00** |
 | 2000/200 | 0.64 | 0.71 | 0.93 |
 
-**Shipped config: 1500/150.**
+**Shipped config: 1500/150.** The 500/50, 1000/100, and 2000/200 rows are from the original sweep against 14 golden pairs; the 1500/150 row has been re-measured against the current 15-pair set (one pair was added since the sweep) and isn't directly comparable pair-for-pair to the other rows, though it remains the clear standout either way.
 
-The curve has a clear shape. At 500 chars, chunks don't carry enough context for the embedding to represent the topic well, and with ~460 chunks in the corpus, too many near-duplicates compete for the top-3 slots. At 2000 chars, chunks start mixing multiple topics, so the resulting vector sits between them and matches any single query only weakly — recall drops back down from the 1500 peak. Recall@10 is flat at 0.93 from 1000 chars up: the right chunk stays *findable* at that size regardless; what changes with chunk size is how well it *ranks* into the top 3–5.
+The curve has a clear shape. At 500 chars, chunks don't carry enough context for the embedding to represent the topic well, and with ~460 chunks in the corpus, too many near-duplicates compete for the top-3 slots. At 2000 chars, chunks start mixing multiple topics, so the resulting vector sits between them and matches any single query only weakly — recall drops back down from the 1500 peak. Recall@10 was flat at 0.93 across 1000–2000 chars in the original sweep; the shipped 1500/150 config now clears 1.00 on the updated 15-pair set, so that flatness no longer extends to it.
 
 **Metric caveat:** strict substring matching (hit only if the retrieved chunk itself contains the phrase) gives 0.36 at 500/50, versus 0.43 for adjacency-aware. The gap exists because of chunk overlap — adjacency-aware credits the case where the answer legitimately lands in a neighboring chunk instead of the one holding the literal phrase. It's a real correction, not a way to inflate the number: it only moved the score by one pair at 500/50, so most of the shortfall at that size is a genuine retrieval problem, not a measurement artifact.
 
@@ -136,5 +136,5 @@ Run it: `pytest -m evals tests/evals/test_answer_evals.py` (hits both the OpenAI
 - **Only PDF files can be ingested.** The spec's plain-text and markdown paths aren't implemented.
 - **Ingest is slow.** Embedding calls are made one chunk at a time, sequentially. OpenAI's batch embeddings endpoint would fix this but isn't implemented.
 - **Reference-list filtering has no measured benefit.** `is_reference_chunk` in `pipeline.py` regex-matches `year;volume(` citation patterns and drops chunks where citation density exceeds 0.10 per 100 characters, removing about 7% of chunks (mostly bibliography pages). It did not measurably move Recall in either direction — it's shipped because it removes obvious noise, not because it was proven to help retrieval.
-- **3 of 14 golden pairs still miss** even at the 1500/150 config. Two are cases where retrieval found a different, topically valid chunk that the golden pair simply didn't credit (the golden-pair phrase is stricter than "correct answer"). One is a genuine miss: an abstract question phrased in everyday terms doesn't share vocabulary with the concrete clinical language in the source chunk.
+- **3 of 15 golden pairs still miss** even at the 1500/150 config. Two are cases where retrieval found a different, topically valid chunk that the golden pair simply didn't credit (the golden-pair phrase is stricter than "correct answer"). One is a genuine miss: an abstract question phrased in everyday terms doesn't share vocabulary with the concrete clinical language in the source chunk.
 - **LLM-as-judge scores are noisy between runs.** The same query/answer pair can get a different score on a re-run of the eval; 0.70 should be read as a point estimate, not a fixed number.

@@ -47,6 +47,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-m 'not evals'"
+markers = ["evals: hits live APIs, run explicitly"]
 
 [tool.mypy]
 python_version = "3.14"

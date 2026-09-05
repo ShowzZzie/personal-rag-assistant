@@ -1,5 +1,6 @@
 from rag.retriever import retrieve
 from rag.store import chroma_persistent_client
+from chromadb.api.types import GetResult
 import pytest
 
 GOLDEN_PAIRS: list[dict[str,str]] = [
@@ -73,13 +74,16 @@ GOLDEN_PAIRS: list[dict[str,str]] = [
         "document": "Role of sleep deprivation in immune-related disease risk and outcomes.pdf",
         "expected_chunk_contains": "smartphone addiction"
     },
+    {
+        "question": "How long before bed should I stop having caffeine?",
+        "document": "Sleep Quality- A Narrative Review on Nutrition, Stimulants, and Physical Activity as Important Factors.pdf",
+        "expected_chunk_contains": "up to 6 h before bedtime",
+    },
 ]
 
 
-def find_targets(phrase: str) -> set[tuple[str, int]]:
+def find_targets(phrase: str, recs: GetResult) -> set[tuple[str, int]]:
     """(document_id, chunk_index) pairs for every chunk containing this phrase."""
-    col = chroma_persistent_client.get_collection("sleep")
-    recs = col.get()
     return {
         (meta["document_id"], meta["chunk_index"])
         for doc, meta in zip(recs["documents"], recs["metadatas"])
@@ -90,10 +94,12 @@ def find_targets(phrase: str) -> set[tuple[str, int]]:
 @pytest.mark.evals
 def test_ret_evals():
     hits = 0
+    collection = chroma_persistent_client.get_collection("sleep")
+    recs = collection.get()
 
     for pair in GOLDEN_PAIRS:
         results = retrieve(pair["question"],"sleep",3)
-        targets = find_targets(pair["expected_chunk_contains"])
+        targets = find_targets(pair["expected_chunk_contains"], recs)
         found = any(
             (r.chunk.document_id, idx) in targets
             for r in results
