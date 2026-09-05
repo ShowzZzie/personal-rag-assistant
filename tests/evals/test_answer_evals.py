@@ -56,7 +56,7 @@ def judge_answer(question: str, chunks: str, answer: str) -> list[JudgeScore]:
     )
 
     blocks = [b for b in message.content if b.type == "tool_use"]
-    assert blocks
+    if not blocks: raise RuntimeError("judge returned no tool_use block")
     return [JudgeScore(**item) for item in blocks[0].input["scores"]]
 
 
@@ -64,7 +64,7 @@ def judge_answer(question: str, chunks: str, answer: str) -> list[JudgeScore]:
 def test_answer_evals():
     results: list[JudgeScore] = []
 
-    for pair in GOLDEN_PAIRS[:10]:
+    for pair in GOLDEN_PAIRS:
         answer = query(pair["question"], "sleep")
         chunks = "\n\n".join(
             f"[{i+1}] {r.chunk.text}" for i, r in enumerate(answer.sources)

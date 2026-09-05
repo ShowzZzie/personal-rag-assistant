@@ -123,11 +123,11 @@ Run it: `pytest -m evals tests/evals/test_retrieval_evals.py` (hits the real Ope
 
 ### Layer 2: answer quality (LLM-as-judge)
 
-10 questions × 3 rubric criteria (`factual`, `cited`, `grounded`), judged by Claude Opus 5 via a forced tool call. Scoring is strict: only `YES` counts as a pass, `PARTIALLY` and `NO` both score zero.
+All 15 golden-pair questions × 3 rubric criteria (`factual`, `cited`, `grounded`), judged by Claude Opus 5 via a forced tool call. Scoring is strict: only `YES` counts as a pass, `PARTIALLY` and `NO` both score zero.
 
-**Result: 21/30 = 0.70.**
+**Result: 0.80 / 0.89 / 0.80 across three runs (36, 40, 36 of 45).** The eval asserts a floor of 0.70, set below the lowest observed run.
 
-Most `PARTIALLY` scores came from the judge flagging that "the context doesn't contain information about X" in cases where the retrieved chunks actually did contain relevant material — i.e. the synthesizer is over-conservative and hedges rather than using context that's there. This is a synthesis-prompt problem, not a retrieval problem.
+In the 40/45 run, most `PARTIALLY` scores came from the synthesizer extrapolating past what the source actually says rather than under-using it — turning an observed effect into a prescriptive recommendation (e.g. "caffeine impairs sleep up to 6h before bed" becoming "stop caffeine at least 6h before bed"), mislabeling a device or figure, or misattributing a claim to the wrong citation. This is the opposite failure mode from the one previously seen here (which was the synthesizer being over-conservative and under-citing available context) — see [Known limitations](#known-limitations) for why the score itself shouldn't be read too literally run-to-run.
 
 Run it: `pytest -m evals tests/evals/test_answer_evals.py` (hits both the OpenAI and Anthropic APIs live — no mocking, real query → real judge).
 
@@ -137,4 +137,4 @@ Run it: `pytest -m evals tests/evals/test_answer_evals.py` (hits both the OpenAI
 - **Ingest is slow.** Embedding calls are made one chunk at a time, sequentially. OpenAI's batch embeddings endpoint would fix this but isn't implemented.
 - **Reference-list filtering has no measured benefit.** `is_reference_chunk` in `pipeline.py` regex-matches `year;volume(` citation patterns and drops chunks where citation density exceeds 0.10 per 100 characters, removing about 7% of chunks (mostly bibliography pages). It did not measurably move Recall in either direction — it's shipped because it removes obvious noise, not because it was proven to help retrieval.
 - **3 of 15 golden pairs still miss** even at the 1500/150 config. Two are cases where retrieval found a different, topically valid chunk that the golden pair simply didn't credit (the golden-pair phrase is stricter than "correct answer"). One is a genuine miss: an abstract question phrased in everyday terms doesn't share vocabulary with the concrete clinical language in the source chunk.
-- **LLM-as-judge scores are noisy between runs.** The same query/answer pair can get a different score on a re-run of the eval; 0.70 should be read as a point estimate, not a fixed number.
+- **LLM-as-judge scores are noisy between runs.** Three runs on the current 15-pair set scored 36, 40, and 36 of 45 (0.80 / 0.89 / 0.80) with no code change in between — the same query/answer pair can be judged differently on a re-run. Treat any single number as a point estimate. An earlier 21/30 = 0.70 predates the 15-pair set and isn't comparable; the failure mode has also shifted since, from over-conservative answers to over-extrapolated ones.
